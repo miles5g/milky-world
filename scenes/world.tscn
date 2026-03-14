@@ -1,10 +1,15 @@
-[gd_scene load_steps=2 format=3 uid="uid://cworld001"]
+[gd_scene load_steps=4 format=3 uid="uid://cworld001"]
+
+[ext_resource type="Script" path="res://scripts/world.gd" id="1_world"]
+[ext_resource type="TileSet" uid="uid://floor_tileset_iso" path="res://assets/tiles/floor_tileset.tres" id="2_tileset"]
 
 [sub_resource type="NavigationPolygon" id="NavigationPolygon_1"]
 
 [node name="World" type="Node2D"]
+script = ExtResource("1_world")
 
-[node name="TileMap" type="TileMap" parent="."]
+[node name="FloorLayer" type="TileMapLayer" parent="."]
+tile_set = ExtResource("2_tileset")
 
 [node name="NavigationRegion2D" type="NavigationRegion2D" parent="."]
 navigation_polygon = SubResource("NavigationPolygon_1")
