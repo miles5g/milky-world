@@ -1,13 +1,11 @@
 extends Node2D
 ## World root: FloorLayer (TileMapLayer) + NavigationRegion2D.
 ##
-## Reset: map space only. We place exactly two tiles using TileMapLayer's native
-## coordinate system — no pixel or tile_size math. If (0,0) and (1,0) interlock
-## in the editor, the TileSet/layout is correct and we can bring back the grid loop.
-##
-## In the editor: TileSet must have Tile Shape = Isometric (diamond). Check
-## assets/tiles/floor_tileset.tres — tile_shape = 1.
+## Map space only. We paint a rectangle in grid coords; Godot converts to screen via the TileSet.
+## Single source of truth for floor size: FLOOR_GRID_WIDTH × FLOOR_GRID_HEIGHT.
 
+const FLOOR_GRID_WIDTH := 5
+const FLOOR_GRID_HEIGHT := 5
 const FLOOR_SOURCE_ID := 0
 const FLOOR_ATLAS_COORDS := Vector2i(0, 0)
 
@@ -16,26 +14,44 @@ const FLOOR_ATLAS_COORDS := Vector2i(0, 0)
 
 
 func _ready() -> void:
-	_paint_diamond_test()
-	_center_camera_on_tiles()
-	_log_map_positions()
+	_paint_floor()
+	_center_camera_on_floor()
+	var count := _count_floor_cells()
+	print("[World] _ready: floor painted %dx%d, cells with tile: %d" % [FLOOR_GRID_WIDTH, FLOOR_GRID_HEIGHT, count])
 
 
-func _paint_diamond_test() -> void:
-	# Map space only. Godot converts these to screen position using the TileSet.
-	floor_layer.set_cell(Vector2i(0, 0), FLOOR_SOURCE_ID, FLOOR_ATLAS_COORDS, 0)
-	floor_layer.set_cell(Vector2i(1, 0), FLOOR_SOURCE_ID, FLOOR_ATLAS_COORDS, 0)
+func _unhandled_input(event: InputEvent) -> void:
+	if event is InputEventMouseButton:
+		var mb: InputEventMouseButton = event
+		if mb.pressed and mb.button_index == MOUSE_BUTTON_LEFT:
+			_handle_click(mb.global_position)
 
 
-func _center_camera_on_tiles() -> void:
-	# Center view on (0,0) and (1,0) so both tiles are on-screen (isometric (1,0) can be up/right of viewport).
-	var pos_00: Vector2 = floor_layer.map_to_local(Vector2i(0, 0))
-	var pos_10: Vector2 = floor_layer.map_to_local(Vector2i(1, 0))
-	camera.position = (pos_00 + pos_10) / 2.0
+func _handle_click(viewport_pos: Vector2) -> void:
+	# Viewport pos is screen coords; convert to world so local_to_map sees correct position.
+	var world_pos: Vector2 = get_viewport().get_canvas_transform().affine_inverse() * viewport_pos
+	var cell: Vector2i = floor_layer.local_to_map(world_pos)
+	var has_tile: bool = floor_layer.get_cell_source_id(cell) != -1
+	print("[World] click -> cell %s (has_floor=%s)" % [cell, has_tile])
+
+
+func _paint_floor() -> void:
+	for x in FLOOR_GRID_WIDTH:
+		for y in FLOOR_GRID_HEIGHT:
+			floor_layer.set_cell(Vector2i(x, y), FLOOR_SOURCE_ID, FLOOR_ATLAS_COORDS, 0)
+
+
+func _center_camera_on_floor() -> void:
+	var top_left: Vector2 = floor_layer.map_to_local(Vector2i(0, 0))
+	var bottom_right: Vector2 = floor_layer.map_to_local(Vector2i(FLOOR_GRID_WIDTH - 1, FLOOR_GRID_HEIGHT - 1))
+	camera.position = (top_left + bottom_right) / 2.0
 	camera.make_current()
 
 
-func _log_map_positions() -> void:
-	var pos_00: Vector2 = floor_layer.map_to_local(Vector2i(0, 0))
-	var pos_10: Vector2 = floor_layer.map_to_local(Vector2i(1, 0))
-	print("[World] Diamond test: (0,0) local=%s  (1,0) local=%s  step=%s" % [pos_00, pos_10, pos_10 - pos_00])
+func _count_floor_cells() -> int:
+	var n := 0
+	for x in FLOOR_GRID_WIDTH:
+		for y in FLOOR_GRID_HEIGHT:
+			if floor_layer.get_cell_source_id(Vector2i(x, y)) != -1:
+				n += 1
+	return n
