@@ -1,18 +1,18 @@
-[gd_scene load_steps=4 format=3 uid="uid://cworld001"]
+[gd_scene format=3 uid="uid://cworld001"]
 
-[ext_resource type="Script" path="res://scripts/world.gd" id="1_world"]
-[ext_resource type="TileSet" uid="uid://floor_tileset_iso" path="res://assets/tiles/floor_tileset.tres" id="2_tileset"]
+[ext_resource type="Script" uid="uid://ogyboyofyrlc" path="res://scripts/world.gd" id="1_world"]
+[ext_resource type="TileSet" path="res://assets/tiles/floor_tileset.tres" id="2_tileset"]
 
 [sub_resource type="NavigationPolygon" id="NavigationPolygon_1"]
 
-[node name="World" type="Node2D"]
+[node name="World" type="Node2D" unique_id=1710499528]
 script = ExtResource("1_world")
 
-[node name="Camera2D" type="Camera2D" parent="."]
+[node name="Camera2D" type="Camera2D" parent="." unique_id=504446163]
 
-[node name="FloorLayer" type="TileMapLayer" parent="."]
-tile_set = ExtResource("2_tileset")
+[node name="FloorLayer" type="TileMapLayer" parent="." unique_id=933885881]
 y_sort_enabled = true
+tile_set = ExtResource("2_tileset")
 
-[node name="NavigationRegion2D" type="NavigationRegion2D" parent="."]
+[node name="NavigationRegion2D" type="NavigationRegion2D" parent="." unique_id=1725100560]
 navigation_polygon = SubResource("NavigationPolygon_1")
