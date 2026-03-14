@@ -1,3 +1,4 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="64" height="32" viewBox="0 0 64 32">
-  <rect width="64" height="32" fill="#4a5568" stroke="#2d3748" stroke-width="1"/>
+  <!-- Isometric diamond: top, right, bottom, left. Only this shape is drawn so tiles interlock. -->
+  <polygon points="32,0 64,16 32,32 0,16" fill="#4a5568" stroke="#2d3748" stroke-width="1"/>
 </svg>
