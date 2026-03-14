@@ -1,0 +1,10 @@
+[gd_scene load_steps=2 format=3 uid="uid://cworld001"]
+
+[sub_resource type="NavigationPolygon" id="NavigationPolygon_1"]
+
+[node name="World" type="Node2D"]
+
+[node name="TileMap" type="TileMap" parent="."]
+
+[node name="NavigationRegion2D" type="NavigationRegion2D" parent="."]
+navigation_polygon = SubResource("NavigationPolygon_1")
