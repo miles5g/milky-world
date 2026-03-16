@@ -9,6 +9,7 @@ const FLOOR_GRID_WIDTH := 5
 const FLOOR_GRID_HEIGHT := 5
 const FLOOR_SOURCE_ID := 0
 const FLOOR_ATLAS_COORDS := Vector2i(0, 0)
+const BLOCKED_CELLS := [Vector2i(2, 2)]  # logical tiles that are not walkable (obstacles)
 
 @onready var floor_layer: TileMapLayer = $FloorLayer
 @onready var camera: Camera2D = $Camera2D
@@ -27,6 +28,7 @@ func _ready() -> void:
 	_center_camera_on_floor()
 	_init_astar()
 	_position_player_on_grid()
+	_spawn_obstacles()
 	var count := _count_floor_cells()
 	print("[World] _ready: floor painted %dx%d, cells with tile: %d" % [FLOOR_GRID_WIDTH, FLOOR_GRID_HEIGHT, count])
 
@@ -137,6 +139,15 @@ func _init_astar() -> void:
 			var has_tile := floor_layer.get_cell_source_id(cell) != -1
 			astar.set_point_solid(cell, not has_tile)
 
+	# Apply additional blocked cells (obstacles), even if a floor tile exists.
+	for blocked in BLOCKED_CELLS:
+		# Manual in-bounds check for AStarGrid2D grid coords.
+		if blocked.x < 0 or blocked.x >= FLOOR_GRID_WIDTH:
+			continue
+		if blocked.y < 0 or blocked.y >= FLOOR_GRID_HEIGHT:
+			continue
+		astar.set_point_solid(blocked, true)
+
 
 func _set_next_path_target() -> void:
 	if path_cells.is_empty():
@@ -146,3 +157,16 @@ func _set_next_path_target() -> void:
 	var next_cell: Vector2i = path_cells.pop_front()
 	player_cell = next_cell
 	current_target_world = floor_layer.map_to_local(next_cell)
+
+
+func _spawn_obstacles() -> void:
+	# Simple visual obstacles on blocked tiles so path detours are obvious.
+	for cell in BLOCKED_CELLS:
+		if not floor_layer.get_cell_source_id(cell) != -1:
+			continue
+		var sprite := Sprite2D.new()
+		sprite.texture = load("res://icon.svg")
+		sprite.scale = Vector2(0.4, 0.4)
+		sprite.modulate = Color(1, 0, 0)  # tint red so blocked tiles stand out
+		sprite.position = floor_layer.map_to_local(cell) + Vector2(0, -16)  # lift so "feet" sit on tile
+		add_child(sprite)
