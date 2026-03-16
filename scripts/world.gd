@@ -16,6 +16,10 @@ const FLOOR_ATLAS_COORDS := Vector2i(0, 0)
 
 var astar: AStarGrid2D
 var player_cell: Vector2i = Vector2i(0, 0)  # logical tile where the player currently stands
+var path_cells: Array[Vector2i] = []
+var move_speed: float = 300.0  # pixels per second, snappy for testing
+var is_moving: bool = false
+var current_target_world: Vector2 = Vector2.ZERO
 
 
 func _ready() -> void:
@@ -32,6 +36,27 @@ func _unhandled_input(event: InputEvent) -> void:
 		var mb: InputEventMouseButton = event
 		if mb.pressed and mb.button_index == MOUSE_BUTTON_LEFT:
 			_handle_click(mb.global_position)
+
+
+func _physics_process(delta: float) -> void:
+	if not is_moving:
+		return
+
+	var to_target: Vector2 = current_target_world - player.position
+	var dist: float = to_target.length()
+	if dist < 1.0:
+		# Snap to target and advance to next cell.
+		player.position = current_target_world
+		if path_cells.is_empty():
+			is_moving = false
+			return
+		_set_next_path_target()
+		return
+
+	var step: float = move_speed * delta
+	if step > dist:
+		step = dist
+	player.position += to_target.normalized() * step
 
 
 func _handle_click(viewport_pos: Vector2) -> void:
@@ -52,9 +77,18 @@ func _handle_click(viewport_pos: Vector2) -> void:
 	var path: PackedVector2Array = astar.get_point_path(player_cell, cell)
 	print("[World] path from %s to %s has %d steps" % [player_cell, cell, path.size()])
 
-	# Snappy movement for now: jump directly to the target tile center.
-	player_cell = cell
-	player.position = floor_layer.map_to_local(player_cell)
+	# Convert path points (Vector2) to grid cells (Vector2i) and skip the first point (current cell).
+	path_cells.clear()
+	for i in range(1, path.size()):
+		var p: Vector2 = path[i]
+		path_cells.append(Vector2i(round(p.x), round(p.y)))
+
+	if path_cells.is_empty():
+		return
+
+	# Begin walking along the path, one tile at a time.
+	is_moving = true
+	_set_next_path_target()
 
 
 func _paint_floor() -> void:
@@ -102,3 +136,13 @@ func _init_astar() -> void:
 			var cell := Vector2i(x, y)
 			var has_tile := floor_layer.get_cell_source_id(cell) != -1
 			astar.set_point_solid(cell, not has_tile)
+
+
+func _set_next_path_target() -> void:
+	if path_cells.is_empty():
+		is_moving = false
+		return
+
+	var next_cell: Vector2i = path_cells.pop_front()
+	player_cell = next_cell
+	current_target_world = floor_layer.map_to_local(next_cell)
