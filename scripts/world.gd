@@ -5,8 +5,8 @@ extends Node2D
 ## Single source of truth for floor size: FLOOR_GRID_WIDTH × FLOOR_GRID_HEIGHT.
 ## AStarGrid2D provides the Fallout-style movement brain (1 tile = 1 AP).
 
-const FLOOR_GRID_WIDTH := 5
-const FLOOR_GRID_HEIGHT := 5
+const FLOOR_GRID_WIDTH := 25
+const FLOOR_GRID_HEIGHT := 25
 const FLOOR_SOURCE_ID := 0
 const FLOOR_ATLAS_COORDS := Vector2i(0, 0)
 const BLOCKED_CELLS := [Vector2i(2, 2)]  # logical tiles that are not walkable (obstacles)
@@ -21,6 +21,7 @@ var path_cells: Array[Vector2i] = []
 var move_speed: float = 300.0  # pixels per second, snappy for testing
 var is_moving: bool = false
 var current_target_world: Vector2 = Vector2.ZERO
+var camera_deadzone_margin: Vector2 = Vector2(64, 64)  # how far player can move from center before snap
 
 
 func _ready() -> void:
@@ -41,6 +42,11 @@ func _unhandled_input(event: InputEvent) -> void:
 
 
 func _physics_process(delta: float) -> void:
+	_update_player_movement(delta)
+	_update_camera_snap()
+
+
+func _update_player_movement(delta: float) -> void:
 	if not is_moving:
 		return
 
@@ -59,6 +65,22 @@ func _physics_process(delta: float) -> void:
 	if step > dist:
 		step = dist
 	player.position += to_target.normalized() * step
+
+
+func _update_camera_snap() -> void:
+	# Snap-follow: only recenter camera when player walks off screen (beyond a deadzone).
+	var viewport_size: Vector2 = get_viewport().get_visible_rect().size
+	var half_size: Vector2 = viewport_size * 0.5
+
+	# Player position in camera-local coordinates.
+	var player_cam_local: Vector2 = camera.to_local(player.global_position)
+
+	var exceeded_x: bool = abs(player_cam_local.x) > (half_size.x - camera_deadzone_margin.x)
+	var exceeded_y: bool = abs(player_cam_local.y) > (half_size.y - camera_deadzone_margin.y)
+
+	if exceeded_x or exceeded_y:
+		# Snap camera so player returns to center of the view.
+		camera.global_position = player.global_position
 
 
 func _handle_click(viewport_pos: Vector2) -> void:
