@@ -3,6 +3,7 @@ extends Node2D
 ##
 ## Map space only. We paint a rectangle in grid coords; Godot converts to screen via the TileSet.
 ## Single source of truth for floor size: FLOOR_GRID_WIDTH × FLOOR_GRID_HEIGHT.
+## AStarGrid2D provides the Fallout-style movement brain (1 tile = 1 AP).
 
 const FLOOR_GRID_WIDTH := 5
 const FLOOR_GRID_HEIGHT := 5
@@ -11,11 +12,17 @@ const FLOOR_ATLAS_COORDS := Vector2i(0, 0)
 
 @onready var floor_layer: TileMapLayer = $FloorLayer
 @onready var camera: Camera2D = $Camera2D
+@onready var player: Node2D = $Player
+
+var astar: AStarGrid2D
+var player_cell: Vector2i = Vector2i(0, 0)  # logical tile where the player currently stands
 
 
 func _ready() -> void:
 	_paint_floor()
 	_center_camera_on_floor()
+	_init_astar()
+	_position_player_on_grid()
 	var count := _count_floor_cells()
 	print("[World] _ready: floor painted %dx%d, cells with tile: %d" % [FLOOR_GRID_WIDTH, FLOOR_GRID_HEIGHT, count])
 
@@ -28,11 +35,26 @@ func _unhandled_input(event: InputEvent) -> void:
 
 
 func _handle_click(viewport_pos: Vector2) -> void:
-	# Viewport pos is screen coords; convert to world so local_to_map sees correct position.
+	# 1) viewport (screen) -> world (canvas)
 	var world_pos: Vector2 = get_viewport().get_canvas_transform().affine_inverse() * viewport_pos
-	var cell: Vector2i = floor_layer.local_to_map(world_pos)
+	# 2) world -> FloorLayer local
+	var local_pos: Vector2 = floor_layer.to_local(world_pos)
+	# 3) local -> map (grid) coords
+	var cell: Vector2i = floor_layer.local_to_map(local_pos)
+
 	var has_tile: bool = floor_layer.get_cell_source_id(cell) != -1
 	print("[World] click -> cell %s (has_floor=%s)" % [cell, has_tile])
+
+	if not has_tile:
+		return
+
+	# Ask the A* brain for a path from the player's current tile to the clicked tile.
+	var path: PackedVector2Array = astar.get_point_path(player_cell, cell)
+	print("[World] path from %s to %s has %d steps" % [player_cell, cell, path.size()])
+
+	# Snappy movement for now: jump directly to the target tile center.
+	player_cell = cell
+	player.position = floor_layer.map_to_local(player_cell)
 
 
 func _paint_floor() -> void:
@@ -55,3 +77,28 @@ func _count_floor_cells() -> int:
 			if floor_layer.get_cell_source_id(Vector2i(x, y)) != -1:
 				n += 1
 	return n
+
+
+func _position_player_on_grid() -> void:
+	# Anchor the player at their feet on the starting tile (0,0).
+	player_cell = Vector2i(0, 0)
+	player.position = floor_layer.map_to_local(player_cell)
+
+
+func _init_astar() -> void:
+	astar = AStarGrid2D.new()
+	astar.size = Vector2i(FLOOR_GRID_WIDTH, FLOOR_GRID_HEIGHT)
+	astar.cell_size = Vector2(1, 1)
+	astar.offset = Vector2(0, 0)  # logical (0,0) is top-left tile
+
+	# Cardinal movement only: no diagonals (Fallout-style 4-direction grid).
+	astar.diagonal_mode = AStarGrid2D.DIAGONAL_MODE_NEVER
+
+	astar.update()
+
+	# Fill walkability from the TileMapLayer.
+	for x in FLOOR_GRID_WIDTH:
+		for y in FLOOR_GRID_HEIGHT:
+			var cell := Vector2i(x, y)
+			var has_tile := floor_layer.get_cell_source_id(cell) != -1
+			astar.set_point_solid(cell, not has_tile)

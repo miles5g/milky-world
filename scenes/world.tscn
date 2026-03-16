@@ -1,11 +1,13 @@
 [gd_scene format=3 uid="uid://cworld001"]
 
 [ext_resource type="Script" uid="uid://ogyboyofyrlc" path="res://scripts/world.gd" id="1_world"]
-[ext_resource type="TileSet" path="res://assets/tiles/floor_tileset.tres" id="2_tileset"]
+[ext_resource type="TileSet" uid="uid://c47fgk0noew6b" path="res://assets/tiles/floor_tileset.tres" id="2_tileset"]
+[ext_resource type="Texture2D" uid="uid://dk5h8hyxpi2ur" path="res://icon.svg" id="3_icon"]
 
 [sub_resource type="NavigationPolygon" id="NavigationPolygon_1"]
 
 [node name="World" type="Node2D" unique_id=1710499528]
+y_sort_enabled = true
 script = ExtResource("1_world")
 
 [node name="Camera2D" type="Camera2D" parent="." unique_id=504446163]
@@ -13,6 +15,11 @@ script = ExtResource("1_world")
 [node name="FloorLayer" type="TileMapLayer" parent="." unique_id=933885881]
 y_sort_enabled = true
 tile_set = ExtResource("2_tileset")
+
+[node name="Player" type="Node2D" parent="." unique_id=2000000000]
+
+[node name="Sprite2D" type="Sprite2D" parent="Player" unique_id=2010722316]
+texture = ExtResource("3_icon")
 
 [node name="NavigationRegion2D" type="NavigationRegion2D" parent="." unique_id=1725100560]
 navigation_polygon = SubResource("NavigationPolygon_1")
