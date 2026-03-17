@@ -14,6 +14,8 @@ const BLOCKED_CELLS := [Vector2i(2, 2)]  # logical tiles that are not walkable (
 @onready var floor_layer: TileMapLayer = $FloorLayer
 @onready var camera: Camera2D = $Camera2D
 @onready var player: Node2D = $Player
+@onready var player_sprite: Sprite2D = $Player/Sprite2D
+@onready var destination_marker: Sprite2D = Sprite2D.new()
 
 var astar: AStarGrid2D
 var player_cell: Vector2i = Vector2i(0, 0)  # logical tile where the player currently stands
@@ -29,6 +31,7 @@ func _ready() -> void:
 	_center_camera_on_floor()
 	_init_astar()
 	_position_player_on_grid()
+	_init_destination_marker()
 	_spawn_obstacles()
 	var count := _count_floor_cells()
 	print("[World] _ready: floor painted %dx%d, cells with tile: %d" % [FLOOR_GRID_WIDTH, FLOOR_GRID_HEIGHT, count])
@@ -57,9 +60,15 @@ func _update_player_movement(delta: float) -> void:
 		player.position = current_target_world
 		if path_cells.is_empty():
 			is_moving = false
+			destination_marker.visible = false
 			return
 		_set_next_path_target()
 		return
+
+	# Flip player horizontally based on movement direction (left/right on screen).
+	if to_target.x != 0.0:
+		var facing_right: bool = to_target.x > 0.0
+		player_sprite.flip_h = facing_right
 
 	var step: float = move_speed * delta
 	if step > dist:
@@ -96,6 +105,8 @@ func _handle_click(viewport_pos: Vector2) -> void:
 
 	if not has_tile:
 		return
+
+	_update_destination_marker(cell)
 
 	# Ask the A* brain for a path from the player's current tile to the clicked tile.
 	var path: PackedVector2Array = astar.get_point_path(player_cell, cell)
@@ -174,11 +185,26 @@ func _init_astar() -> void:
 func _set_next_path_target() -> void:
 	if path_cells.is_empty():
 		is_moving = false
+		destination_marker.visible = false
 		return
 
 	var next_cell: Vector2i = path_cells.pop_front()
 	player_cell = next_cell
 	current_target_world = floor_layer.map_to_local(next_cell)
+
+
+func _init_destination_marker() -> void:
+	# Use the same floor texture as an overlay, tinted to "glow" the tile.
+	destination_marker.texture = load("res://assets/tiles/placeholder_floor.svg")
+	destination_marker.scale = Vector2(1, 1)
+	destination_marker.modulate = Color(1, 1, 0, 0.5)  # semi-transparent yellow glow
+	destination_marker.visible = false
+	add_child(destination_marker)
+
+
+func _update_destination_marker(target_cell: Vector2i) -> void:
+	destination_marker.position = floor_layer.map_to_local(target_cell)
+	destination_marker.visible = true
 
 
 func _spawn_obstacles() -> void:
