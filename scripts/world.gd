@@ -16,6 +16,7 @@ const BLOCKED_CELLS := [Vector2i(2, 2)]  # logical tiles that are not walkable (
 @onready var player: Node2D = $Player
 @onready var player_sprite: Sprite2D = $Player/Sprite2D
 @onready var destination_marker: Sprite2D = Sprite2D.new()
+@onready var hover_marker: Sprite2D = Sprite2D.new()
 
 var astar: AStarGrid2D
 var player_cell: Vector2i = Vector2i(0, 0)  # logical tile where the player currently stands
@@ -32,6 +33,7 @@ func _ready() -> void:
 	_init_astar()
 	_position_player_on_grid()
 	_init_destination_marker()
+	_init_hover_marker()
 	_spawn_obstacles()
 	var count := _count_floor_cells()
 	print("[World] _ready: floor painted %dx%d, cells with tile: %d" % [FLOOR_GRID_WIDTH, FLOOR_GRID_HEIGHT, count])
@@ -42,6 +44,9 @@ func _unhandled_input(event: InputEvent) -> void:
 		var mb: InputEventMouseButton = event
 		if mb.pressed and mb.button_index == MOUSE_BUTTON_LEFT:
 			_handle_click(mb.global_position)
+	elif event is InputEventMouseMotion:
+		var mm: InputEventMouseMotion = event
+		_handle_hover(mm.position)
 
 
 func _physics_process(delta: float) -> void:
@@ -106,6 +111,7 @@ func _handle_click(viewport_pos: Vector2) -> void:
 	if not has_tile:
 		return
 
+	# Clicking keeps the destination glow anchored on the clicked tile.
 	_update_destination_marker(cell)
 
 	# Ask the A* brain for a path from the player's current tile to the clicked tile.
@@ -205,6 +211,32 @@ func _init_destination_marker() -> void:
 func _update_destination_marker(target_cell: Vector2i) -> void:
 	destination_marker.position = floor_layer.map_to_local(target_cell)
 	destination_marker.visible = true
+
+
+func _init_hover_marker() -> void:
+	# Hover glow: same shape, different tint so it's distinguishable from destination.
+	hover_marker.texture = load("res://assets/tiles/placeholder_floor.svg")
+	hover_marker.scale = Vector2(1, 1)
+	hover_marker.modulate = Color(0, 1, 1, 0.35)  # semi-transparent cyan
+	hover_marker.visible = false
+	add_child(hover_marker)
+
+
+func _handle_hover(viewport_pos: Vector2) -> void:
+	# 1) viewport (screen) -> world (canvas)
+	var world_pos: Vector2 = get_viewport().get_canvas_transform().affine_inverse() * viewport_pos
+	# 2) world -> FloorLayer local
+	var local_pos: Vector2 = floor_layer.to_local(world_pos)
+	# 3) local -> map (grid) coords
+	var cell: Vector2i = floor_layer.local_to_map(local_pos)
+
+	var has_tile: bool = floor_layer.get_cell_source_id(cell) != -1
+	if not has_tile:
+		hover_marker.visible = false
+		return
+
+	hover_marker.position = floor_layer.map_to_local(cell)
+	hover_marker.visible = true
 
 
 func _spawn_obstacles() -> void:
