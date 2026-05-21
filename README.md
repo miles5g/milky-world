@@ -1,6 +1,6 @@
-# Milky World
+# Isometric Grid Prototype
 
-Early-phase **2D isometric grid prototype** (Fallout-style click-to-move) built in Godot 4 — foundation for a tile-based world with A* pathfinding and camera follow.
+Early-phase **2D isometric, Fallout-style grid** prototype — click-to-move with A* pathfinding on a painted tile floor. Foundation for a tile-based tactics or exploration game.
 
 ## Highlights
 
@@ -30,22 +30,14 @@ Enable editor plugins under **Project → Project Settings → Plugins** if you 
 | **Left-click** | Move to tile (pathfinds on grid) |
 | **Mouse hover** | Highlight tile under cursor |
 
-Keyboard movement is planned; current build is click-only.
-
-## Project layout
-
-```
-milky-world/
-├── scenes/world.tscn      # Main scene
-├── scripts/               # Player, pathfinding, camera
-├── addons/                # A* grid + tilemap tools
-└── project.godot
-```
-
 ## Status
 
-Active prototype — grid, pathfinding, and camera are in place; content and mechanics are still expanding.
+Active prototype — grid, pathfinding, and camera are in place; content and mechanics still expanding.
+
+## Author
+
+Miles Johnson — [@miles5g](https://github.com/miles5g)
 
 ## License
 
-MIT (see repository license if present).
+MIT
